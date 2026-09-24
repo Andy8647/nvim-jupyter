@@ -31,9 +31,19 @@ _G.JupyterStatusColumn = function()
 end
 
 -- Setup highlight groups
+-- Border groups use `default` so users can override them after setup().
+-- Per-cell-type groups fall back to the legacy Active/Inactive groups,
+-- so existing configurations keep working unchanged.
 vim.cmd([[
     highlight JupyterBorderActive guifg=#89B4FA gui=bold
     highlight JupyterBorderInactive guifg=#45475A
+
+    highlight default JupyterBorderActiveMarkdown guifg=#A6E3A1 gui=bold
+    highlight default JupyterBorderActiveCode guifg=#89B4FA gui=bold
+    highlight default JupyterBorderActiveOutput guifg=#89B4FA gui=bold
+    highlight default link JupyterBorderMarkdown JupyterBorderInactive
+    highlight default link JupyterBorderCode JupyterBorderInactive
+    highlight default link JupyterBorderOutput JupyterBorderInactive
     
     highlight JupyterStatusPending guifg=#F5C2E7
     highlight JupyterStatusRunning guifg=#89B4FA gui=bold
@@ -146,7 +156,10 @@ function M.render_cells(bufnr)
     
     for i, cell in ipairs(cells) do
         local is_active = (active_line >= cell.start_line and active_line <= cell.end_line)
-        local hl = is_active and "JupyterBorderActive" or "JupyterBorderInactive"
+        -- Pick the border highlight by cell type; per-type groups fall back
+        -- (via `default link`) to the legacy Active/Inactive groups.
+        local cell_type = cell.is_output and "Output" or (cell.is_markdown and "Markdown" or "Code")
+        local hl = (is_active and "JupyterBorderActive" .. cell_type or "JupyterBorder" .. cell_type)
         
         if is_active then
             vim.b[bufnr].jupyter_active_cell = { start_line = cell.start_line, end_line = cell.end_line }
