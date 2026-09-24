@@ -168,6 +168,7 @@ function M.render_cells(bufnr)
     end
     
     local cell_index = 1
+    local active_cell = nil
     
     for i, cell in ipairs(cells) do
         local is_active = (active_line >= cell.start_line and active_line <= cell.end_line)
@@ -178,6 +179,7 @@ function M.render_cells(bufnr)
         
         if is_active then
             vim.b[bufnr].jupyter_active_cell = { start_line = cell.start_line, end_line = cell.end_line }
+            active_cell = cell
         end
         
         if not cell.implicit and not cell.is_output then
@@ -360,6 +362,9 @@ function M.render_cells(bufnr)
             virt_lines_above = false,
         })
     end
+
+    -- Reading view in Global Mode, source while a markdown cell is being edited.
+    require("nvim_jupyter.markdown").sync_conceal(bufnr, active_cell)
 end
 
 function M.setup()
