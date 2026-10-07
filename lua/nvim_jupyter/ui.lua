@@ -1,10 +1,37 @@
 local M = {}
 local ns_id = vim.api.nvim_create_namespace("nvim_jupyter_ui")
 
+--- Left border for a screen line that is not a buffer line (wrapped text, or
+--- virt_lines such as inline images other plugins render below a line).
+--- Signs are only drawn on real lines, so without this the cell's left border
+--- has a gap wherever such lines appear.
+---@return string
+local function virtual_line_border()
+    local buf = vim.api.nvim_get_current_buf()
+    local row = vim.v.lnum - 1
+    local marks = vim.api.nvim_buf_get_extmarks(buf, ns_id, { row, 0 }, { row, -1 }, { details = true })
+    local sign_hl, has_bottom_border = nil, false
+    for _, mark in ipairs(marks) do
+        local details = mark[4]
+        if details.sign_text then
+            sign_hl = details.sign_hl_group
+        end
+        if details.virt_lines then
+            has_bottom_border = true
+        end
+    end
+    -- Not inside a bordered cell, or this is the bottom border itself
+    -- (it is re-created on every render, so it is the last virt_line of the row).
+    if not sign_hl or (has_bottom_border and vim.v.virtnum == -1) then
+        return "%s  "
+    end
+    return "%#" .. sign_hl .. "#│ %*  "
+end
+
 _G.JupyterStatusColumn = function()
     -- Do not print line numbers for virtual lines (wrapped lines or bottom borders)
     if vim.v.virtnum ~= 0 then
-        return "%s  "
+        return virtual_line_border()
     end
 
     local buf = vim.api.nvim_get_current_buf()
